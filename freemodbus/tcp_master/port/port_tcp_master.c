@@ -79,6 +79,7 @@ void vMBPortEventClose( void );
 /* ----------------------- Static variables ---------------------------------*/
 static const char *TAG = "MB_TCP_MASTER_PORT";
 static MbPortConfig_t xMbPortConfig;
+static uint8_t unit_id = 0;
 static EventGroupHandle_t xMasterEventHandle = NULL;
 static SemaphoreHandle_t xShutdownSemaphore = NULL;
 static EventBits_t xMasterEvent = 0;
@@ -102,10 +103,11 @@ BOOL xMBTCPPortMasterWaitEvent(EventGroupHandle_t xEventHandle, EventBits_t xEve
 }
 
 BOOL
-xMBMasterTCPPortInit( USHORT usTCPPort )
+xMBMasterTCPPortInit( USHORT usTCPPort, uint8_t i_unit_id )
 {
     BOOL bOkay = FALSE;
 
+    unit_id = i_unit_id;
     xMbPortConfig.pxMbSlaveInfo = calloc(MB_TCP_PORT_MAX_CONN, sizeof(MbSlaveInfo_t*));
     if (!xMbPortConfig.pxMbSlaveInfo) {
         ESP_LOGE(TAG, "TCP slave info alloc failure.");
@@ -984,6 +986,8 @@ xMBMasterTCPPortSendResponse( UCHAR * pucMBTCPFrame, USHORT usTCPLength )
             ESP_LOGD(TAG, MB_SLAVE_FMT(", send to died slave, error = %d"),
                                                   pxInfo->xIndex, pxInfo->xSockId, pxInfo->pcIpAddr, pxInfo->xError);
         } else {
+            // Set Unit ID
+            pucMBTCPFrame[MB_TCP_UID] = unit_id;
             // Apply TID field to the frame before send
             pucMBTCPFrame[MB_TCP_TID] = (UCHAR)(pxInfo->usTidCnt >> 8U);
             pucMBTCPFrame[MB_TCP_TID + 1] = (UCHAR)(pxInfo->usTidCnt & 0xFF);
