@@ -222,6 +222,7 @@ static void vMBTCPPortMasterMStoTimeVal(USHORT usTimeoutMs, struct timeval *tv)
 static void xMBTCPPortMasterCheckShutdown(void) {
     // First check if the task is not flagged for shutdown
     if (xShutdownSemaphore) {
+	ESP_LOGI(TAG, "Exiting");
         xSemaphoreGive(xShutdownSemaphore);
         vTaskDelete(NULL);
     }
@@ -726,11 +727,9 @@ static void vMBTCPPortMasterTask(void *pvParameters)
         ESP_LOGI(TAG, "Connecting to slaves...");
         xTime = xMBTCPGetTimeStamp();
         usSlaveConnCnt = 0;
-        CHAR ucDot = '.';
         while(usSlaveConnCnt < xMbPortConfig.usMbSlaveInfoCount) {
             usSlaveConnCnt = 0;
             FD_ZERO(&xConnSet);
-            ucDot ^= 0x03;
             // Slave connection loop
             for (UCHAR ucCnt = 0; (ucCnt < MB_TCP_PORT_MAX_CONN); ucCnt++) {
                 pxInfo = xMbPortConfig.pxMbSlaveInfo[ucCnt];
@@ -742,7 +741,6 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                     }
                     break;
                 }
-                putchar(ucDot);
                 xErr = xMBTCPPortMasterConnect(pxInfo);
                 switch(xErr)
                 {
