@@ -622,7 +622,7 @@ eMBErrorCode eMBRegDiscreteCBSerialMaster(UCHAR * pucRegBuffer, USHORT usAddress
         iRegBitIndex = (USHORT)(usAddress) % 8; // Get bit index
         while (iNReg > 1)
         {
-            xMBUtilSetBits(pucDiscreteInputBuf++, iRegBitIndex, 8, *pucRegBuffer++);
+            xMBUtilSetBits(pucDiscreteInputBuf++, iRegBitIndex - ((USHORT)(usAddress) % 8), 8, *pucRegBuffer++);
             iNReg--;
         }
         // last discrete
@@ -630,7 +630,7 @@ eMBErrorCode eMBRegDiscreteCBSerialMaster(UCHAR * pucRegBuffer, USHORT usAddress
         // xMBUtilSetBits has bug when ucNBits is zero
         if (usNDiscrete != 0)
         {
-            xMBUtilSetBits(pucDiscreteInputBuf, iRegBitIndex, usNDiscrete, *pucRegBuffer++);
+            xMBUtilSetBits(pucDiscreteInputBuf, iRegBitIndex - ((USHORT)(usAddress) % 8), usNDiscrete, *pucRegBuffer++);
         }
     } else {
         eStatus = MB_ENOREG;
