@@ -68,6 +68,7 @@
 #define MB_EVENT_REQ_ERR_MASK           ( EV_MASTER_PROCESS_SUCCESS )
 
 #define MB_EVENT_WAIT_TOUT_MS           ( 3000 )
+#define MB_SHDN_WAIT_TOUT_MS            ( 5000 )
 
 #define MB_TCP_READ_TICK_MS             ( 1 )
 #define MB_TCP_READ_BUF_RETRY_CNT       ( 4 )
@@ -81,7 +82,7 @@ static const char *TAG = "MB_TCP_MASTER_PORT";
 static MbPortConfig_t xMbPortConfig;
 static uint8_t unit_id = 0;
 static EventGroupHandle_t xMasterEventHandle = NULL;
-static SemaphoreHandle_t xShutdownSemaphore = NULL;
+static SemaphoreHandle_t xShutdownSema = NULL;
 static EventBits_t xMasterEvent = 0;
 
 /* ----------------------- Static functions ---------------------------------*/
@@ -131,7 +132,7 @@ xMBMasterTCPPortInit( USHORT usTCPPort, uint8_t i_unit_id )
 
     // Create task for packet processing
     BaseType_t xErr = xTaskCreatePinnedToCore(vMBTCPPortMasterTask,
-                                              "tcp_master_task",
+                                              "mbm_port_tcp_task",
                                               MB_TCP_STACK_SIZE,
                                               NULL,
                                               MB_TCP_TASK_PRIO,
@@ -145,8 +146,6 @@ xMBMasterTCPPortInit( USHORT usTCPPort, uint8_t i_unit_id )
         ESP_LOGI(TAG, "TCP master stack initialized.");
         bOkay = TRUE;
     }
-
-    vTaskSuspend(xMbPortConfig.xMbTcpTaskHandle);
     return bOkay;
 }
 
@@ -219,16 +218,6 @@ static void vMBTCPPortMasterMStoTimeVal(USHORT usTimeoutMs, struct timeval *tv)
     tv->tv_usec = (usTimeoutMs - (tv->tv_sec * 1000)) * 1000;
 }
 
-static void xMBTCPPortMasterCheckShutdown(void)
-{
-    // First check if the task is not flagged for shutdown
-    if (xShutdownSemaphore) {
-	ESP_LOGI(TAG, "Exiting");
-        xSemaphoreGive(xShutdownSemaphore);
-        vTaskDelete(NULL);
-    }
-}
-
 static BOOL xMBTCPPortMasterCloseConnection(MbSlaveInfo_t *pxInfo)
 {
     if (!pxInfo) {
@@ -244,6 +233,26 @@ static BOOL xMBTCPPortMasterCloseConnection(MbSlaveInfo_t *pxInfo)
     close(pxInfo->xSockId);
     pxInfo->xSockId = -1;
     return TRUE;
+}
+
+static void xMBTCPPortMasterShutdown(void)
+{
+    xSemaphoreGive(xShutdownSema);
+    vTaskDelete(NULL);
+    xMbPortConfig.xMbTcpTaskHandle = NULL;
+
+    for (USHORT ucCnt = 0; ucCnt < MB_TCP_PORT_MAX_CONN; ucCnt++) {
+        MbSlaveInfo_t* pxInfo = xMbPortConfig.pxMbSlaveInfo[ucCnt];
+        if (pxInfo) {
+            xMBTCPPortMasterCloseConnection(pxInfo);
+            if (pxInfo->pucRcvBuf) {
+                free(pxInfo->pucRcvBuf);
+            }
+            free(pxInfo);
+            xMbPortConfig.pxMbSlaveInfo[ucCnt] = NULL;
+        }
+    }
+    free(xMbPortConfig.pxMbSlaveInfo);
 }
 
 void vMBTCPPortMasterSetNetOpt(void *pvNetIf, eMBPortIpVer xIpVersion, eMBPortProto xProto)
@@ -301,7 +310,7 @@ static int xMBTCPPortMasterGetBuf(MbSlaveInfo_t *pxInfo, UCHAR *pucDstBuf, USHOR
 
     // Receive data from connected client
     while (usBytesLeft > 0) {
-        xMBTCPPortMasterCheckShutdown();
+        TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
         xLength = recv(pxInfo->xSockId, pucBuf, usBytesLeft, 0);
         if (xLength < 0) {
             if (errno == EAGAIN) {
@@ -681,7 +690,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
     while (1) {
         MbSlaveAddrInfo_t xSlaveAddrInfo = { 0 };
         BaseType_t xStatus = xQueueReceive(xMbPortConfig.xConnectQueue, (void*)&xSlaveAddrInfo, pdMS_TO_TICKS(MB_EVENT_WAIT_TOUT_MS));
-	    xMBTCPPortMasterCheckShutdown();
+        TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
         if (xStatus != pdTRUE) {
             ESP_LOGE(TAG, "Fail to register slave IP.");
         } else {
@@ -785,7 +794,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                 if (pxInfo) {
                     pxInfo->xError = xErr;
                 }
-                xMBTCPPortMasterCheckShutdown();
+                TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
             }
         }
         ESP_LOGI(TAG, "Connected %u slaves, start polling...", (unsigned)usSlaveConnCnt);
@@ -797,6 +806,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
             xReadSet = xConnSet;
             // Check transmission event to clear appropriate bit.
             xMBMasterPortFsmWaitConfirmation(EV_MASTER_FRAME_TRANSMIT, pdMS_TO_TICKS(MB_EVENT_WAIT_TOUT_MS));
+            TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
             // Synchronize state machine with send packet event
             if (xMBMasterPortFsmWaitConfirmation(EV_MASTER_FRAME_SENT, pdMS_TO_TICKS(MB_EVENT_WAIT_TOUT_MS))) {
                 ESP_LOGD(TAG, "FSM Synchronized with sent event.");
@@ -807,7 +817,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                 ESP_LOGE(TAG, "Incorrect connection options for slave index: %d.",
                          (int)xMbPortConfig.ucCurSlaveIndex);
                 vMBTCPPortMasterStopPoll();
-                xMBTCPPortMasterCheckShutdown();
+                TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
                 break; // incorrect slave descriptor, reconnect.
             }
             xTime = xMBTCPPortMasterGetRespTimeLeft(pxCurrInfo);
@@ -823,7 +833,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                 xTime = xMBTCPPortMasterGetRespTimeLeft(pxCurrInfo);
                 // Wait completion of last transaction
                 xMBMasterPortFsmWaitConfirmation(MB_EVENT_REQ_DONE_MASK, pdMS_TO_TICKS(xTime + 1));
-                xMBTCPPortMasterCheckShutdown();
+                TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
                 continue;
             } else if (xRes < 0) {
                 // Select error (slave connection or r/w failure).
@@ -834,7 +844,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                 xMBMasterPortFsmWaitConfirmation(MB_EVENT_REQ_DONE_MASK, pdMS_TO_TICKS(xTime));
                 // Stop polling process
                 vMBTCPPortMasterStopPoll();
-                xMBTCPPortMasterCheckShutdown();
+                TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
                 // Check disconnected slaves, do not need a result just to print information.
                 xMBTCPPortMasterCheckConnState(&xConnSet);
                 break;
@@ -868,7 +878,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                                  (int)pxCurrInfo->xIndex, (int)pxCurrInfo->xSockId, pxCurrInfo->pcIpAddr, (int)xRet);
                         // Stop polling process
                         vMBTCPPortMasterStopPoll();
-                        xMBTCPPortMasterCheckShutdown();
+                        TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
                         // Check disconnected slaves, do not need a result just to print information.
                         xMBTCPPortMasterCheckConnState(&xConnSet);
                         break;
@@ -885,7 +895,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                              (int)pxCurrInfo->xIndex, (int)pxCurrInfo->xSockId, pxCurrInfo->pcIpAddr, xTime);
                 }
             }
-            xMBTCPPortMasterCheckShutdown();
+            TCP_PORT_CHECK_SHDN(xShutdownSema, xMBTCPPortMasterShutdown);
         } // while(usMbSlaveInfoCount)
     } // while (1)
     vTaskDelete(NULL);
@@ -896,35 +906,23 @@ extern void vMBMasterPortTimerClose(void);
 
 void vMBMasterTCPPortEnable(void)
 {
-    vTaskResume(xMbPortConfig.xMbTcpTaskHandle);
+
 }
 
 void vMBMasterTCPPortDisable(void)
 {
     // Try to exit the task gracefully, so select could release its internal callbacks
     // that were allocated on the stack of the task we're going to delete
-    xShutdownSemaphore = xSemaphoreCreateBinary();
+    xShutdownSema = xSemaphoreCreateBinary();
     // if no semaphore (alloc issues) or couldn't acquire it, just delete the task
-    if (xShutdownSemaphore == NULL || xSemaphoreTake(xShutdownSemaphore, pdMS_TO_TICKS(MB_EVENT_WAIT_TOUT_MS)) != pdTRUE) {
+    if (xShutdownSema == NULL || xSemaphoreTake(xShutdownSema, pdMS_TO_TICKS(MB_SHDN_WAIT_TOUT_MS)) != pdTRUE) {
         ESP_LOGW(TAG, "Modbus port task couldn't exit gracefully within timeout -> abruptly deleting the task.");
         vTaskDelete(xMbPortConfig.xMbTcpTaskHandle);
     }
-    if (xShutdownSemaphore) {
-        vSemaphoreDelete(xShutdownSemaphore);
-        xShutdownSemaphore = NULL;
+    if (xShutdownSema) {
+        vSemaphoreDelete(xShutdownSema);
+        xShutdownSema = NULL;
     }
-    for (USHORT ucCnt = 0; ucCnt < MB_TCP_PORT_MAX_CONN; ucCnt++) {
-        MbSlaveInfo_t* pxInfo = xMbPortConfig.pxMbSlaveInfo[ucCnt];
-        if (pxInfo) {
-            xMBTCPPortMasterCloseConnection(pxInfo);
-            if (pxInfo->pucRcvBuf) {
-                free(pxInfo->pucRcvBuf);
-            }
-            free(pxInfo);
-            xMbPortConfig.pxMbSlaveInfo[ucCnt] = NULL;
-        }
-    }
-    free(xMbPortConfig.pxMbSlaveInfo);
 }
 
 void vMBMasterTCPPortClose(void)

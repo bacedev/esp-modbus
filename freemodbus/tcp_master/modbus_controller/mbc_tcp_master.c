@@ -181,7 +181,6 @@ static esp_err_t mbc_tcp_master_start(void)
     return ESP_OK;
 }
 
-// Modbus controller destroy function
 static esp_err_t mbc_tcp_master_destroy(void)
 {
     MB_MASTER_ASSERT(mbm_interface_ptr != NULL);
@@ -189,17 +188,21 @@ static esp_err_t mbc_tcp_master_destroy(void)
     MB_MASTER_CHECK((mbm_opts != NULL), ESP_ERR_INVALID_ARG, "mb incorrect options pointer.");
     eMBErrorCode mb_error = MB_ENOERR;
 
-    // Disable and then destroy the Modbus stack
-    mb_error = eMBMasterDisable();
-    MB_MASTER_CHECK((mb_error == MB_ENOERR), ESP_ERR_INVALID_STATE, "mb stack disable failure.");
-    mb_error = eMBMasterClose();
-    MB_MASTER_CHECK((mb_error == MB_ENOERR), ESP_ERR_INVALID_STATE,
-                        "mb stack close failure returned (0x%x).", (int)mb_error);
     // Stop polling by clearing correspondent bit in the event group
     xEventGroupClearBits(mbm_opts->mbm_event_group,
                          (EventBits_t)MB_EVENT_STACK_STARTED);
+
+    // Disable and then destroy the Modbus port
+    mb_error = eMBMasterDisable();
+    MB_MASTER_CHECK((mb_error == MB_ENOERR), ESP_ERR_INVALID_STATE, "mb stack disable failure.");
+
     (void)vTaskDelete(mbm_opts->mbm_task_handle);
-    mbm_opts->mbm_task_handle = NULL;
+    mbm_opts->mbm_task_handle = NULL; 
+
+    mb_error = eMBMasterClose();
+    MB_MASTER_CHECK((mb_error == MB_ENOERR), ESP_ERR_INVALID_STATE,
+                        "mb stack close failure returned (0x%x).", (int)mb_error);
+
     (void)vEventGroupDelete(mbm_opts->mbm_event_group);
     mbm_opts->mbm_event_group = NULL;
     mbc_tcp_master_free_slave_list();
@@ -682,7 +685,7 @@ eMBErrorCode eMBRegCoilsCBTcpMaster(UCHAR *pucRegBuffer, USHORT usAddress,
         switch (eMode) {
             case MB_REG_WRITE:
                 while (usCoils > 0) {
-                    UCHAR ucResult = xMBUtilGetBits((UCHAR*)pucRegCoilsBuf, iRegIndex, 1);
+                    UCHAR ucResult = xMBUtilGetBits(pucRegCoilsBuf, iRegIndex - (usAddress % 8), 1);
                     xMBUtilSetBits(pucRegBuffer, iRegIndex - (usAddress % 8) , 1, ucResult);
                     iRegIndex++;
                     usCoils--;
@@ -691,7 +694,7 @@ eMBErrorCode eMBRegCoilsCBTcpMaster(UCHAR *pucRegBuffer, USHORT usAddress,
             case MB_REG_READ:
                 while (usCoils > 0) {
                     UCHAR ucResult = xMBUtilGetBits(pucRegBuffer, iRegIndex - (usAddress % 8), 1);
-                    xMBUtilSetBits((uint8_t*)pucRegCoilsBuf, iRegIndex, 1, ucResult);
+                    xMBUtilSetBits(pucRegCoilsBuf, iRegIndex - (usAddress % 8), 1, ucResult);
                     iRegIndex++;
                     usCoils--;
                 }
@@ -735,7 +738,7 @@ eMBErrorCode eMBRegDiscreteCBTcpMaster(UCHAR * pucRegBuffer, USHORT usAddress,
         iRegBitIndex = (USHORT)(usAddress) % 8; // Get bit index
         while (iNReg > 1)
         {
-            xMBUtilSetBits(pucDiscreteInputBuf++, iRegBitIndex, 8, *pucRegBuffer++);
+            xMBUtilSetBits(pucDiscreteInputBuf++, iRegBitIndex - (usAddress % 8), 8, *pucRegBuffer++);
             iNReg--;
         }
         // last discrete
@@ -743,7 +746,7 @@ eMBErrorCode eMBRegDiscreteCBTcpMaster(UCHAR * pucRegBuffer, USHORT usAddress,
         // xMBUtilSetBits has bug when ucNBits is zero
         if (usNDiscrete != 0)
         {
-            xMBUtilSetBits(pucDiscreteInputBuf, iRegBitIndex, usNDiscrete, *pucRegBuffer++);
+            xMBUtilSetBits(pucDiscreteInputBuf, iRegBitIndex - (usAddress % 8), usNDiscrete, *pucRegBuffer++);
         }
     } else {
         eStatus = MB_ENOREG;
