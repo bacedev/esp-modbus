@@ -751,6 +751,7 @@ static void vMBTCPPortMasterTask(void *pvParameters)
                     }
                     break;
                 }
+		vTaskDelay(pdMS_TO_TICKS(100)); /* if we don't yield we run the risk of hogging CPU */
                 xErr = xMBTCPPortMasterConnect(pxInfo);
                 switch(xErr)
                 {
