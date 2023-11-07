@@ -155,11 +155,11 @@ static xMBFunctionHandler xMasterFuncHandlers[MB_FUNC_HANDLERS_MAX] = {
 /* ----------------------- Start implementation -----------------------------*/
 #if MB_MASTER_TCP_ENABLED
 eMBErrorCode
-eMBMasterTCPInit( USHORT ucTCPPort, uint8_t i_unit_id )
+eMBMasterTCPInit( USHORT ucTCPPort )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
-    if( ( eStatus = eMBMasterTCPDoInit( ucTCPPort, i_unit_id ) ) != MB_ENOERR ) {
+    if( ( eStatus = eMBMasterTCPDoInit( ucTCPPort ) ) != MB_ENOERR ) {
         eMBState = STATE_DISABLED;
     }
     else if( !xMBMasterPortEventInit(  ) ) {

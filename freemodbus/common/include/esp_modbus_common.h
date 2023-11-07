@@ -149,7 +149,6 @@ typedef union {
         mb_tcp_addr_type_t ip_addr_type;       /*!< Modbus address type */
         void* ip_addr;                         /*!< Modbus address table for connection */
         void* ip_netif_ptr;                    /*!< Modbus network interface */
-        uint8_t unit_id;                       /*!< Modbus unit id */
     };
 } mb_communication_info_t;
 
