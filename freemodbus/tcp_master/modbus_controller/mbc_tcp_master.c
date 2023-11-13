@@ -267,12 +267,15 @@ static esp_err_t mbc_tcp_master_send_request(mb_param_request_t* request, void* 
         uint8_t mb_command = request->command;
         uint16_t mb_offset = request->reg_start;
         uint16_t mb_size = request->reg_size;
+	uint8_t mb_unit_id = request->unit_id;
         
         // Set the buffer for callback function processing of received data
         mbm_opts->mbm_reg_buffer_ptr = (uint8_t*)data_ptr;
         mbm_opts->mbm_reg_buffer_size = mb_size;
 
         vMBMasterRunResRelease();
+
+	vMBMasterSetDestUnitID(mb_unit_id);
 
         // Calls appropriate request function to send request and waits response
         switch(mb_command)
@@ -464,6 +467,7 @@ static esp_err_t mbc_tcp_master_set_request(char* name, mb_param_mode_t mode, mb
             request->slave_addr = reg_ptr->mb_slave_addr;
             request->reg_start = reg_ptr->mb_reg_start;
             request->reg_size = reg_ptr->mb_size;
+            request->unit_id = reg_ptr->mb_unit_id;
             request->command = mbc_tcp_master_get_command(reg_ptr->mb_param_type, mode);
             MB_MASTER_CHECK((request->command > 0), ESP_ERR_INVALID_ARG, "mb incorrect command or parameter type.");
             if (reg_data != NULL) {

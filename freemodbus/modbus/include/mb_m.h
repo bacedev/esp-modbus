@@ -397,6 +397,8 @@ eMBMasterFuncReadWriteMultipleHoldingRegister( UCHAR * pucFrame, USHORT * usLen 
 void vMBMasterGetPDUSndBuf( UCHAR ** pucFrame );
 UCHAR ucMBMasterGetDestAddress( void );
 void vMBMasterSetDestAddress( UCHAR Address );
+UCHAR ucMBMasterGetDestUnitID( void );
+void vMBMasterSetDestUnitID( UCHAR UnitID );
 BOOL xMBMasterGetCBRunInMasterMode( void );
 void vMBMasterSetCBRunInMasterMode( BOOL IsMasterMode );
 USHORT usMBMasterGetPDUSndLength( void );
