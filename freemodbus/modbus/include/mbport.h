@@ -261,7 +261,7 @@ BOOL            xMBTCPPortSendResponse( UCHAR *pucMBTCPFrame, USHORT usTCPLength
 #endif
 
 #if MB_MASTER_TCP_ENABLED
-BOOL            xMBMasterTCPPortInit( USHORT usTCPPort, uint8_t i_unit_id );
+BOOL            xMBMasterTCPPortInit( USHORT usTCPPort );
 
 void            vMBMasterTCPPortClose( void );
 

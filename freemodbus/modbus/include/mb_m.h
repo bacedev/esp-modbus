@@ -144,7 +144,7 @@ eMBErrorCode    eMBMasterSerialInit( eMBMode eMode, UCHAR ucPort,
  *        slave addresses are in the range 1 - 247.
  *    - eMBErrorCode::MB_EPORTERR IF the porting layer returned an error.
  */
-eMBErrorCode    eMBMasterTCPInit( USHORT usTCPPort, uint8_t i_unit_id );
+eMBErrorCode    eMBMasterTCPInit( USHORT usTCPPort );
 
 /*! \ingroup modbus
  * \brief Release resources used by the protocol stack.
@@ -397,6 +397,8 @@ eMBMasterFuncReadWriteMultipleHoldingRegister( UCHAR * pucFrame, USHORT * usLen 
 void vMBMasterGetPDUSndBuf( UCHAR ** pucFrame );
 UCHAR ucMBMasterGetDestAddress( void );
 void vMBMasterSetDestAddress( UCHAR Address );
+UCHAR ucMBMasterGetDestUnitID( void );
+void vMBMasterSetDestUnitID( UCHAR UnitID );
 BOOL xMBMasterGetCBRunInMasterMode( void );
 void vMBMasterSetCBRunInMasterMode( BOOL IsMasterMode );
 USHORT usMBMasterGetPDUSndLength( void );

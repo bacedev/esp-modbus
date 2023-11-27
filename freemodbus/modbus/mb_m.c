@@ -72,6 +72,7 @@
 /* ----------------------- Static variables ---------------------------------*/
 
 static UCHAR ucMBMasterDestAddress;
+static UCHAR ucMBMasterDestUnitId = MB_TCP_PSEUDO_ADDRESS;
 static BOOL xMBRunInMasterMode = FALSE;
 static volatile eMBMasterErrorEventType eMBMasterCurErrorType;
 static volatile USHORT usMasterSendPDULength;
@@ -155,11 +156,11 @@ static xMBFunctionHandler xMasterFuncHandlers[MB_FUNC_HANDLERS_MAX] = {
 /* ----------------------- Start implementation -----------------------------*/
 #if MB_MASTER_TCP_ENABLED
 eMBErrorCode
-eMBMasterTCPInit( USHORT ucTCPPort, uint8_t i_unit_id )
+eMBMasterTCPInit( USHORT ucTCPPort )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
-    if( ( eStatus = eMBMasterTCPDoInit( ucTCPPort, i_unit_id ) ) != MB_ENOERR ) {
+    if( ( eStatus = eMBMasterTCPDoInit( ucTCPPort ) ) != MB_ENOERR ) {
         eMBState = STATE_DISABLED;
     }
     else if( !xMBMasterPortEventInit(  ) ) {
@@ -366,7 +367,8 @@ eMBMasterPoll( void )
                     MB_PORT_CHECK(ucMBSendFrame, MB_EILLSTATE, "Send buffer initialization fail.");
                     // Check if the frame is for us. If not ,send an error process event.
                     if ( ( eStatus == MB_ENOERR ) && ( ( ucRcvAddress == ucMBMasterGetDestAddress() )
-                                                    || ( ucRcvAddress == MB_TCP_PSEUDO_ADDRESS) ) ) {
+                                                    || ( ucRcvAddress == ucMBMasterGetDestUnitID())  
+						    || ( ucRcvAddress == MB_TCP_PSEUDO_ADDRESS)  ) ) {
                         if ( ( ucMBRcvFrame[MB_PDU_FUNC_OFF]  & ~MB_FUNC_ERROR ) == ( ucMBSendFrame[MB_PDU_FUNC_OFF] ) ) {
                             ESP_LOGD(MB_PORT_TAG, "%" PRIu64 ": Packet data received successfully (%u).", xEvent.xTransactionId, (unsigned)eStatus);
                             ESP_LOG_BUFFER_HEX_LEVEL("POLL receive buffer", (void*)ucMBRcvFrame, (uint16_t)usLength, ESP_LOG_DEBUG);
@@ -510,6 +512,19 @@ void vMBMasterSetDestAddress( UCHAR Address )
 {
     atomic_store(&(ucMBMasterDestAddress), Address);
 }
+
+// Get Modbus Master send destination unit ID.
+UCHAR ucMBMasterGetDestUnitID( void )
+{
+    return atomic_load(&ucMBMasterDestUnitId);
+}
+
+// Set Modbus Master send destination unit ID.
+void vMBMasterSetDestUnitID( UCHAR UnitID )
+{
+    atomic_store(&(ucMBMasterDestUnitId), UnitID);
+}
+
 
 // Get Modbus Master current error event type.
 eMBMasterErrorEventType inline eMBMasterGetErrorType( void )

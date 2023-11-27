@@ -44,6 +44,7 @@
 
 /* ----------------------- Modbus includes ----------------------------------*/
 #include "mb.h"
+#include "mb_m.h"
 #include "mbconfig.h"
 #include "mbtcp_m.h"
 #include "mbframe.h"
@@ -79,11 +80,11 @@
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
-eMBMasterTCPDoInit( USHORT ucTCPPort, uint8_t i_unit_id )
+eMBMasterTCPDoInit( USHORT ucTCPPort )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
-    if( xMBMasterTCPPortInit( ucTCPPort, i_unit_id ) == FALSE )
+    if( xMBMasterTCPPortInit( ucTCPPort ) == FALSE )
     {
         eStatus = MB_EPORTERR;
     }
@@ -157,7 +158,7 @@ eMBMasterTCPSend( UCHAR ucAddress, const UCHAR * pucFrame, USHORT usLength )
      * If the RTU over TCP is not supported, the UID = 0 or 0xFF.
      */
 #if MB_TCP_UID_ENABLED
-    pucMBTCPFrame[MB_TCP_UID] = ucAddress;
+    pucMBTCPFrame[MB_TCP_UID] = ucMBMasterGetDestUnitID();
 #else
     pucMBTCPFrame[MB_TCP_UID] = 0x00;
 #endif
