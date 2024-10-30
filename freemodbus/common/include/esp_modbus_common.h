@@ -139,6 +139,7 @@ typedef union {
         uart_port_t port;                       /*!< Modbus communication port (UART) number */
         uint32_t baudrate;                      /*!< Modbus baudrate */
         uart_parity_t parity;                   /*!< Modbus UART parity settings */
+        uart_stop_bits_t stop;                  /*!< Modbus UART stop settings */
         uint16_t dummy_port;                    /*!< Dummy field, unused */
     };
     // TCP/UDP communication structure

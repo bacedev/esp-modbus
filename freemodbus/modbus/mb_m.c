@@ -190,7 +190,7 @@ eMBMasterTCPInit( USHORT ucTCPPort )
 #endif
 
 eMBErrorCode
-eMBMasterSerialInit( eMBMode eMode, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
+eMBMasterSerialInit( eMBMode eMode, UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity, UCHAR ucStopBits )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
 
@@ -208,7 +208,7 @@ eMBMasterSerialInit( eMBMode eMode, UCHAR ucPort, ULONG ulBaudRate, eMBParity eP
         pxMBMasterPortCBTimerExpired = xMBMasterRTUTimerExpired;
         eMBMasterCurrentMode = MB_ASCII;
 
-        eStatus = eMBMasterRTUInit(ucPort, ulBaudRate, eParity);
+        eStatus = eMBMasterRTUInit(ucPort, ulBaudRate, eParity, ucStopBits );
         break;
 #endif
 #if MB_MASTER_ASCII_ENABLED > 0

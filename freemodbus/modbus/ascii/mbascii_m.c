@@ -117,7 +117,7 @@ eMBMasterASCIIInit( UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
     ENTER_CRITICAL_SECTION(  );
     ucMBLFCharacter = MB_ASCII_DEFAULT_LF;
 
-    if( xMBMasterPortSerialInit( ucPort, ulBaudRate, MB_ASCII_BITS_PER_SYMB, eParity ) != TRUE )
+    if( xMBMasterPortSerialInit( ucPort, ulBaudRate, MB_ASCII_BITS_PER_SYMB, eParity, UART_STOP_BITS_1 ) != TRUE )
     {
         eStatus = MB_EPORTERR;
     }

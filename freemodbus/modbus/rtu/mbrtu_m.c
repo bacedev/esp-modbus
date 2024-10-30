@@ -89,7 +89,7 @@ static volatile UCHAR *ucMasterRTUSndBuf = ucMasterSndBuf;
 
 /* ----------------------- Start implementation -----------------------------*/
 eMBErrorCode
-eMBMasterRTUInit(UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
+eMBMasterRTUInit(UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity, UCHAR ucStopBits )
 {
     eMBErrorCode    eStatus = MB_ENOERR;
     ULONG           usTimerT35_50us;
@@ -97,7 +97,7 @@ eMBMasterRTUInit(UCHAR ucPort, ULONG ulBaudRate, eMBParity eParity )
     ENTER_CRITICAL_SECTION(  );
 
     /* Modbus RTU uses 8 Databits. */
-    if( xMBMasterPortSerialInit( ucPort, ulBaudRate, 8, eParity ) != TRUE )
+    if( xMBMasterPortSerialInit( ucPort, ulBaudRate, 8, eParity, ucStopBits ) != TRUE )
     {
         eStatus = MB_EPORTERR;
     }

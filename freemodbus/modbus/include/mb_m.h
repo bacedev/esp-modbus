@@ -128,7 +128,7 @@ typedef enum
  *    - eMBErrorCode::MB_EPORTERR IF the porting layer returned an error.
  */
 eMBErrorCode    eMBMasterSerialInit( eMBMode eMode, UCHAR ucPort,
-		                 ULONG ulBaudRate, eMBParity eParity );
+		                 ULONG ulBaudRate, eMBParity eParity, UCHAR ucStopBits );
 
 /*! \ingroup modbus
  * \brief Initialize the Modbus Master protocol stack for Modbus TCP.

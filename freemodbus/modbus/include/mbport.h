@@ -161,7 +161,7 @@ BOOL            xMBPortSerialSendResponse( UCHAR *pucMBSerialFrame, USHORT usSer
 
 #if MB_MASTER_RTU_ENABLED || MB_MASTER_ASCII_ENABLED
 BOOL            xMBMasterPortSerialInit( UCHAR ucPort, ULONG ulBaudRate,
-                                   UCHAR ucDataBits, eMBParity eParity );
+                                   UCHAR ucDataBits, eMBParity eParity, UCHAR ucStopBits );
 
 void            vMBMasterPortClose( void );
 

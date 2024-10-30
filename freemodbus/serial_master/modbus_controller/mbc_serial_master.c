@@ -94,7 +94,7 @@ static esp_err_t mbc_serial_master_start(void)
     // Initialize Modbus stack using mbcontroller parameters
     status = eMBMasterSerialInit((eMBMode)comm_info->mode, (UCHAR)comm_info->port,
                                     (ULONG)comm_info->baudrate,
-                                    MB_PORT_PARITY_GET(comm_info->parity));
+                                    MB_PORT_PARITY_GET(comm_info->parity), (UCHAR)comm_info->stop);
 
     MB_MASTER_CHECK((status == MB_ENOERR), ESP_ERR_INVALID_STATE,
             "mb stack initialization failure, eMBInit() returns (0x%x).", (int)status);
