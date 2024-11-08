@@ -120,6 +120,7 @@ typedef enum
  * \param ulBaudRate The baudrate. E.g. 19200. Supported baudrates depend
  *   on the porting layer.
  * \param eParity Parity used for serial transmission.
+ * \param ucStopBits Code for number of stop bits: 1=1, 2=1.5, 3=2
  *
  * \return If no error occurs the function returns eMBErrorCode::MB_ENOERR.
  *   The protocol is then in the disabled state and ready for activation
