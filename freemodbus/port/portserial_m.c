@@ -260,7 +260,7 @@ static void vUartTask(void* pvParameters)
 }
 
 /* ----------------------- Start implementation -----------------------------*/
-BOOL xMBMasterPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity )
+BOOL xMBMasterPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, eMBParity eParity, UCHAR ucStopBits)
 {
     esp_err_t xErr = ESP_OK;
     // Set communication port number
@@ -268,6 +268,7 @@ BOOL xMBMasterPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, 
     // Configure serial communication parameters
     UCHAR ucParity = UART_PARITY_DISABLE;
     UCHAR ucData = UART_DATA_8_BITS;
+    UCHAR ucStop = UART_STOP_BITS_1;
     switch(eParity){
         case MB_PAR_NONE:
             ucParity = UART_PARITY_DISABLE;
@@ -299,11 +300,21 @@ BOOL xMBMasterPortSerialInit( UCHAR ucPORT, ULONG ulBaudRate, UCHAR ucDataBits, 
             ucData = UART_DATA_8_BITS;
             break;
     }
+    switch(ucStopBits){
+        case UART_STOP_BITS_1:
+        case UART_STOP_BITS_1_5:
+        case UART_STOP_BITS_2:
+            ucStop = ucStopBits;
+            break;
+        default:
+            ucStop = UART_STOP_BITS_1;
+            break;
+    }
     uart_config_t xUartConfig = {
         .baud_rate = ulBaudRate,
         .data_bits = ucData,
         .parity = ucParity,
-        .stop_bits = UART_STOP_BITS_1,
+        .stop_bits = ucStop,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 2,
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
