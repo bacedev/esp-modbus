@@ -1,3 +1,4 @@
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 /*
  * SPDX-FileCopyrightText: 2016-2022 Espressif Systems (Shanghai) CO LTD
  *

@@ -1,3 +1,5 @@
+
+#define LOG_LOCAL_LEVEL ESP_LOG_VERBOSE
 /*
  * SPDX-FileCopyrightText: 2006 Christian Walter
  *
