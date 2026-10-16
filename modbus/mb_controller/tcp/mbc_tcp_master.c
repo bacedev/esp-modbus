@@ -347,7 +347,7 @@ static esp_err_t mbc_tcp_master_get_parameter(void *ctx, uint16_t cid, uint8_t *
             /* should never get here */
             ESP_LOGE(TAG, "%p Try to send request for cid #%u with server_idx = %d, node is not found.",
                      mbm_controller_iface, (unsigned)reg_info.cid, (int)request.slave_addr);
-            return ESP_ERR_INVALID_STATE;
+            return ESP_ERR_TIMEOUT;
         
         } else {
             ESP_LOGI(TAG, "%p Found config for cid #%u, server_idx=%d, ip: %s.",
@@ -486,7 +486,7 @@ static esp_err_t mbc_tcp_master_set_parameter(void *ctx, uint16_t cid, uint8_t *
         if (!addr_info) {
             ESP_LOGW(TAG, "Try to send request for cid #%u with uid = %d, node is disconnected.",
                      (unsigned)reg_info.cid, (int)request.slave_addr);
-	    return ESP_ERR_INVALID_STATE;
+	    return ESP_ERR_TIMEOUT;
         }
 	ESP_LOGI(TAG, "%p Found config for cid #%u, server_idx=%d, ip: %s.",
         	 mbm_controller_iface, (unsigned)reg_info.cid, (int)request.slave_addr, addr_info->ip_addr_str);
